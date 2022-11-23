@@ -14,26 +14,63 @@ public class ClienteUDP {
         int puerto = 4444;
         byte[] buffer;
         byte[] buffer2 = new byte[1024];
+        int respuesta = 0;
         try {
             InetAddress direccionServidor = InetAddress.getByName("localhost");
             DatagramSocket cliente = new DatagramSocket();
+
+            do {
+                try {
+                    System.out.println("""
+                            Bienvenido a JamaicaBank que desea hacer?.
+                            1. Darse de alta
+                            2. Entrar a su portal
+                            3. Salir""");
+                    System.out.print("Res: ");
+                    respuesta = Integer.parseInt(br.readLine());
+                    switch (respuesta) {
+                        case 1:
+                            int resIntroducirDatos = 0;
+                            do {
+                                System.out.println("""
+                                        Que desea hacer?
+                                        1. Introducir datos
+                                        2. Salir""");
+                                System.out.print("Res: ");
+                                resIntroducirDatos = Integer.parseInt(br.readLine());
+                            } while (resIntroducirDatos != 2);
+                            break;
+                        case 2:
+
+                            break;
+                        case 3:
+                            System.out.println("Adios! 😁");
+                            break;
+                        default:
+                            System.out.println("Tiene que ser una opcion valida");
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Tiene que ser un numero!");
+                }
+
+            } while (respuesta != 3);
+
             System.out.println("Introduce mensaje: ");
             String mensaje = br.readLine();
             buffer = mensaje.getBytes();
-            DatagramPacket paquete = new DatagramPacket(buffer,buffer.length,direccionServidor,puerto);
+            DatagramPacket paquete = new DatagramPacket(buffer, buffer.length, direccionServidor, puerto);
             System.out.println("Se envio el mensaje");
             cliente.send(paquete);
 
 
-
-            DatagramPacket respuesta = new DatagramPacket(buffer2,buffer2.length);
-            cliente.receive(respuesta);
+            DatagramPacket respuestaDa = new DatagramPacket(buffer2, buffer2.length);
+            cliente.receive(respuestaDa);
             System.out.println("Hora recibida");
-            mensaje = new String(respuesta.getData());
+            mensaje = new String(respuestaDa.getData());
             System.out.println(mensaje.trim());
             cliente.close();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println("Error: " + e);
         }
     }
 }

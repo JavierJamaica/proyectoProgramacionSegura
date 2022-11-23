@@ -22,7 +22,7 @@ public class ServidorUdpHilo extends Thread {
 
             while (true) {
                 DatagramPacket recibido = new DatagramPacket(new byte[1024], 1024);
-                System.out.println("\nEjercicios.Ejercicio4Asi.Servidor activo baby!");
+                System.out.println("Servidor del banco activo!");
                 socket.receive(recibido);
                 System.out.println("Ha llegado una peticion!");
                 System.out.println("Procedente de: " + recibido.getAddress());
