@@ -7,7 +7,7 @@ import java.net.DatagramSocket;
 public class ServidorUDP {
     public static void main(String[] args) throws IOException {
 
-        int puerto = 4444;
+        int puerto = 3344;
 
         DatagramSocket servidor = new DatagramSocket(puerto);
         ServidorUdpHilo serverHilo = new ServidorUdpHilo(servidor);
@@ -15,4 +15,6 @@ public class ServidorUDP {
 
 
     }
+
+
 }
