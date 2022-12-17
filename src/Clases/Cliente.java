@@ -9,6 +9,7 @@ import java.util.Arrays;
  */
 public class Cliente implements Serializable {
 
+    private static final long serialVersionUID = -5402905524421154662L;
     private String nombre;
     private String apellido;
     private int edad;
@@ -75,8 +76,7 @@ public class Cliente implements Serializable {
 
     @Override
     public String toString() {
-        return "Datos cliente:\n" +
-                "Nombre: " + nombre + "\n" + "Apellidos: " + apellido + "\n" + "Edad: " + edad + "\n" + "Email: " + email + "\n"
+        return "Nombre: " + nombre + "\n" + "Apellidos: " + apellido + "\n" + "Edad: " + edad + "\n" + "Email: " + email + "\n"
                 + "Usuario: " + usuario + "\n" + "Contraseña: " + Arrays.toString(contra);
 
     }
