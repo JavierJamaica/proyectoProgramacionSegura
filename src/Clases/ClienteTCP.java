@@ -6,9 +6,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.net.Socket;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
+import java.security.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,12 +44,39 @@ public class ClienteTCP {
                     System.out.print("Res: ");
                     respuesta = Integer.parseInt(br.readLine());
                     byte[] opSer = cifrarDatosAlta(String.valueOf(respuesta), clave);
+                    System.out.println("Enviamos opcion");
                     oos.writeObject(opSer);
                     switch (respuesta) {
 
                         case 1 -> {
-                            int resIntroducirDatos;
-                            do {
+
+                            boolean check;
+                            System.out.println("Leemos mensaje");
+                            String mensaje = ois.readObject().toString();
+                            System.out.println(mensaje);
+                            System.out.println(terminosBanco());
+
+                            System.out.println("Si/No");
+                            System.out.print("R: ");
+                            String r = br.readLine();
+                            byte[] resNormas = cifrarDatosAlta(r, clave);
+                            if (r.equalsIgnoreCase("si")) {
+                                System.out.println("Enviamos respuesta normas");
+                                oos.writeObject(resNormas);
+
+                                Signature verificadsa = Signature.getInstance("SHA1WITHRSA");
+                                verificadsa.initVerify(clave);
+
+                                verificadsa.update(mensaje.getBytes());
+                                byte[] firma = (byte[]) ois.readObject();
+                                check = verificadsa.verify(firma);
+                                System.out.println("Normas firmadas");
+                            } else {
+                                check = false;
+                            }
+                            if (check) {
+                                int resIntroducirDatos = 0;
+
                                 System.out.println("""
                                         Que desea hacer?
                                         1. Introducir datos
@@ -71,11 +96,24 @@ public class ClienteTCP {
                                     System.out.print("Apellido: ");
                                     String apellido = br.readLine();
                                     byte[] apellidoSer = cifrarDatosAlta(apellido, clave);
+                                    boolean edadComp;
+                                    byte[] edadSer;
+                                    do {
+                                        System.out.println("Escriba su edad: ");
+                                        System.out.print("Edad: ");
+                                        int edad = 0;
+                                        try {
+                                            edad = Integer.parseInt(br.readLine());
+                                            edadComp = true;
+                                        } catch (NumberFormatException e) {
+                                            System.out.println("La edad tiene que ser un numero!");
+                                            edadComp = false;
+                                        }
 
-                                    System.out.println("Escriba su edad: ");
-                                    System.out.print("Edad: ");
-                                    int edad = Integer.parseInt(br.readLine());
-                                    byte[] edadSer = cifrarDatosAlta(String.valueOf(edad), clave);
+
+                                        edadSer = cifrarDatosAlta(String.valueOf(edad), clave);
+                                    } while (!edadComp);
+
                                     boolean emailComp = false;
                                     byte[] emailSer;
                                     do {
@@ -114,7 +152,12 @@ public class ClienteTCP {
                                     }
 
                                 }
-                            } while (resIntroducirDatos != 2);
+                            } else {
+                                oos.writeObject(resNormas);
+                                System.out.println("No se aceptaron las normas");
+                            }
+
+
                         }
                         case 2 -> {
                             int opAccesoPortal;
@@ -122,6 +165,8 @@ public class ClienteTCP {
                                 System.out.println("1. Insertar credenciales\n" + "2. Atras");
                                 System.out.print("Res: ");
                                 opAccesoPortal = Integer.parseInt(br.readLine());
+                                byte[] accCif = cifrarDatosAlta(String.valueOf(opAccesoPortal), clave);
+                                oos.writeObject(accCif);
                                 if (opAccesoPortal == 1) {
                                     System.out.println("Inserta tu usuario: ");
                                     System.out.println("Usuario: ");
@@ -142,11 +187,54 @@ public class ClienteTCP {
                                                         4. Salir.""");
                                                 System.out.print("R: ");
                                                 rCliente = Integer.parseInt(br.readLine());
+                                                byte[] opPor = cifrarDatosAlta(String.valueOf(rCliente), clave);
+                                                oos.writeObject(opPor);
                                                 switch (rCliente) {
                                                     case 1:
                                                         ServidorTcpHilo.verSaldo(usuario);
                                                         break;
                                                     case 2:
+                                                        int rTransfer;
+                                                        do {
+                                                            System.out.println("1. Hacer transferencia\n" + "2. Ver cuentas\n" + "3. Salir");
+                                                            System.out.print("R: ");
+                                                            rTransfer = Integer.parseInt(br.readLine());
+                                                            byte[] transferCif = cifrarDatosIngresarRetirar(String.valueOf(rTransfer), clave);
+                                                            oos.writeObject(transferCif);
+                                                            switch (rTransfer) {
+                                                                case 1:
+
+                                                                    System.out.println("Escribe el numero de cuenta a donde deseas hacer la transferencia: ");
+                                                                    System.out.print("Cuenta: ");
+                                                                    String nCuentaTrans = br.readLine();
+                                                                    byte[] nCuentaCif = cifrarDatosAlta(nCuentaTrans, clave);
+                                                                    System.out.println("Enviamos Cuenta");
+                                                                    oos.writeObject(nCuentaCif);
+                                                                    if (ois.readObject().toString().equals("false")) {
+                                                                        System.out.println("La cuenta no existe");
+                                                                    } else {
+                                                                        System.out.println("Escribe la cantidad que vas a enviar: ");
+                                                                        System.out.print("Cantidad: ");
+                                                                        int dineroTran = Integer.parseInt(br.readLine());
+                                                                        byte[] dineroTranCif = cifrarDatosAlta(String.valueOf(dineroTran), clave);
+
+                                                                        byte[] usuCifTran = cifrarDatosAlta(usuario, clave);
+
+                                                                        System.out.println("Enviamos Cantidad");
+                                                                        oos.writeObject(dineroTranCif);
+                                                                        oos.writeObject(usuCifTran);
+                                                                    }
+
+
+                                                                    break;
+                                                                case 2:
+                                                                    ServidorTcpHilo.leerCuenta();
+                                                                    break;
+                                                                case 3:
+                                                                    break;
+                                                                default:
+                                                            }
+                                                        } while (rTransfer != 3);
                                                         break;
                                                     case 3:
                                                         int rIngresar;
@@ -156,10 +244,11 @@ public class ClienteTCP {
                                                                     1. Ingresar dinero
                                                                     2. Retirar dinero
                                                                     3. Salir""");
+                                                            System.out.print("R: ");
                                                             rIngresar = Integer.parseInt(br.readLine());
                                                             switch (rIngresar) {
                                                                 case 1:
-                                                                    byte[] ingresarId = cifrarDatosIngresarRetirar("I", clave);
+                                                                    byte[] ingresarId = cifrarDatosIngresarRetirar(String.valueOf(rIngresar), clave);
                                                                     oos.writeObject(ingresarId);
                                                                     byte[] usuSer = cifrarDatosIngresarRetirar(usuario, clave);
                                                                     oos.writeObject(usuSer);
@@ -167,11 +256,20 @@ public class ClienteTCP {
                                                                     int dinero = Integer.parseInt(br.readLine());
                                                                     byte[] dineroSer = cifrarDatosIngresarRetirar(String.valueOf(dinero), clave);
                                                                     oos.writeObject(dineroSer);
+                                                                    break;
                                                                 case 2:
-                                                                    byte[] retirarId = cifrarDatosIngresarRetirar("I", clave);
+                                                                    byte[] retirarId = cifrarDatosIngresarRetirar(String.valueOf(rIngresar), clave);
                                                                     oos.writeObject(retirarId);
+                                                                    byte[] usuSer2 = cifrarDatosIngresarRetirar(usuario, clave);
+                                                                    oos.writeObject(usuSer2);
                                                                     System.out.println("Escribe la cantidad a retirar:");
+                                                                    int dinero2 = Integer.parseInt(br.readLine());
+                                                                    byte[] dineroSer2 = cifrarDatosIngresarRetirar(String.valueOf(dinero2), clave);
+                                                                    oos.writeObject(dineroSer2);
+                                                                    break;
                                                                 case 3:
+                                                                    byte[] salirId = cifrarDatosIngresarRetirar(String.valueOf(rIngresar), clave);
+                                                                    oos.writeObject(salirId);
                                                                 default:
                                                                     System.out.println("Tiene que ser una opcion valida");
                                                             }
@@ -197,9 +295,12 @@ public class ClienteTCP {
                         default -> System.out.println("Tiene que ser una opcion valida");
                     }
                 } catch (NumberFormatException e) {
+
                     System.out.println("Tiene que ser un numero!");
                 } catch (NoSuchAlgorithmException | ClassNotFoundException e) {
                     System.out.println("Error: " + e);
+                } catch (SignatureException e) {
+                    throw new RuntimeException(e);
                 }
 
             } while (respuesta != 3);
@@ -282,5 +383,10 @@ public class ClienteTCP {
         fileInputStream.close();
 
         return false;
+    }
+
+    public static String terminosBanco() {
+        return "Para ello, cuenta con diversas políticas, códigos y normativa interna, que se inspiran en las mejores prácticas y protocolos internacionales, códigos de conducta y guías internacionales aplicables en cada materia.\n" +
+                "El contenido de estas políticas constituye un proceso de mejora continua. Anualmente Santander lleva a cabo una revisión de sus políticas corporativas de sostenibilidad, de aplicación a todo el Grupo. Estas políticas son aprobadas por el consejo de administración del Grupo, indicando en la política la fecha de la última actualización.";
     }
 }
