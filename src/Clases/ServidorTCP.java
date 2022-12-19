@@ -6,6 +6,9 @@ import java.net.Socket;
 
 
 public class ServidorTCP {
+    /**
+     * Funcion principal que ejecuta a la aplicacion del servidor
+     */
     public static void main(String[] args) throws IOException {
 
         int puerto = 3344;

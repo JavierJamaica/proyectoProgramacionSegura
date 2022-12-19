@@ -22,6 +22,9 @@ public class ServidorTcpHilo extends Thread {
 
     static char[] characters = {'A', 'B', 'C', 'D', 'F', 'G', 'H', 'I', 'J', 'K'};
 
+    /**
+     * Funcion del Hilo ServidorTcpHilo en el cual toda la logica del servidor se ejecuta
+     */
     @Override
     public void run() {
         int opDecifrado;
@@ -40,7 +43,8 @@ public class ServidorTcpHilo extends Thread {
             //mandamos la clave publica
 
             oos.writeObject(publica);
-            System.out.println("Enviamos la clave publica");
+            oos.writeObject(privada);
+            System.out.println("Enviamos la clave publica y privada");
 
             do {
 
@@ -119,28 +123,47 @@ public class ServidorTcpHilo extends Thread {
 
                                                     switch (rTransfer) {
                                                         case 1:
-                                                            System.out.println("Esperando cuentaN");
-                                                            byte[] cuentaCif = (byte[]) ois.readObject();
-                                                            String cuentaDec = decifrarDatos(cuentaCif, privada);
-                                                            if (comprobrarCuenta(cuentaDec)) {
-                                                                String noExist = "true";
-                                                                oos.writeObject(noExist);
-                                                                System.out.println("Esperando dinero");
-                                                                byte[] dineroCif = (byte[]) ois.readObject();
-                                                                int dineroDec = Integer.parseInt(decifrarDatos(dineroCif, privada));
-                                                                System.out.println("llamamos funcion");
-                                                                transferencia(cuentaDec, dineroDec);
-                                                                System.out.println("Esperando usu");
-                                                                byte[] usuCif = (byte[]) ois.readObject();
-                                                                String usuDecif = decifrarDatos(usuCif, privada);
-                                                                retirarDineroTran(usuDecif, dineroDec);
-                                                                break;
+                                                            int dF = dobleFactor();
+                                                            byte[] dFcif = ClienteTCP.cifrarDatosAlta(String.valueOf(dF), publica);
+                                                            oos.writeObject(dFcif);
+                                                            System.out.println("Esperando codF");
+                                                            byte[] codEsCif = (byte[]) ois.readObject();
+                                                            int codDescDf = Integer.parseInt(decifrarDatos(codEsCif, privada));
+                                                            if (codDescDf == dF) {
+                                                                String ok = "true";
+                                                                byte[] okDec = ClienteTCP.cifrarDatosAlta(ok,publica);
+                                                                oos.writeObject(okDec);
+                                                                System.out.println("Autenticacion correcta");
+                                                                System.out.println("Esperando cuentaN");
+                                                                byte[] cuentaCif = (byte[]) ois.readObject();
+                                                                String cuentaDec = decifrarDatos(cuentaCif, privada);
+                                                                if (comprobrarCuenta(cuentaDec)) {
+                                                                    String noExist = "true";
+                                                                    oos.writeObject(noExist);
+                                                                    System.out.println("Esperando dinero");
+                                                                    byte[] dineroCif = (byte[]) ois.readObject();
+                                                                    int dineroDec = Integer.parseInt(decifrarDatos(dineroCif, privada));
+                                                                    System.out.println("llamamos funcion");
+                                                                    transferencia(cuentaDec, dineroDec);
+                                                                    System.out.println("Esperando usu");
+                                                                    byte[] usuCif = (byte[]) ois.readObject();
+                                                                    String usuDecif = decifrarDatos(usuCif, privada);
+                                                                    retirarDineroTran(usuDecif, dineroDec);
+                                                                    break;
+                                                                } else {
+                                                                    System.out.println("Cuenta no existe");
+                                                                    String noExist = "false";
+                                                                    oos.writeObject(noExist);
+                                                                }
                                                             } else {
-                                                                System.out.println("Cuenta no existe");
-                                                                String noExist = "false";
-                                                                oos.writeObject(noExist);
+                                                                System.out.println("Autenticacion fallida");
+                                                                String ok = "false";
+                                                                byte[] okDec = ClienteTCP.cifrarDatosAlta(ok,publica);
+                                                                oos.writeObject(okDec);
+
                                                             }
 
+                                                            break;
                                                         case 2:
                                                             System.out.println("Leyendo cuentas");
                                                             leerCuenta();
@@ -222,6 +245,13 @@ public class ServidorTcpHilo extends Thread {
 
     }
 
+    /**
+     * Funcion que decifra los datos recibidos desde el cliente
+     *
+     * @param datos   recibe un String de datos apra decifrar
+     * @param privada recibe la clave privada que se genera al principio
+     * @return devuelve un String que serian los datos decifrados
+     */
     public static String decifrarDatos(byte[] datos, PrivateKey privada) {
         try {
             Cipher descipher = Cipher.getInstance("RSA");
@@ -235,6 +265,16 @@ public class ServidorTcpHilo extends Thread {
 
     }
 
+    /**
+     * Funcion que usa los datos recibidos para guardalos en un fichero.dat
+     *
+     * @param nombre   que se guardara en el fichero
+     * @param apellido que se guardara en el fichero
+     * @param edad     que se guardara en el fichero
+     * @param email    que se guardara en el fichero
+     * @param usuario  que se guardara en el fichero
+     * @param contra   que se guardara en el fichero
+     */
     public static void darAltaUsuario(String nombre, String apellido, int edad, String email, String usuario, byte[] contra) throws IOException, NoSuchAlgorithmException, ClassNotFoundException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 
         File fichero = new File(".//src/Ficheros/Clientes.dat");
@@ -259,6 +299,14 @@ public class ServidorTcpHilo extends Thread {
         System.out.println("Se asocio el cliente con la cuenta: \n" + cuenta);
     }
 
+    /**
+     * Funcion que se usa para comprobar si el ususario existe en el fichero.dat
+     *
+     * @param usu recibe el usuario con el cual se buscara si existe
+     * @return devuelve true si existe o false si no
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
     public static boolean comprobrarUsuario(String usu) throws IOException, ClassNotFoundException {
 
         List<Cliente> clientes = new ArrayList<>();
@@ -285,6 +333,12 @@ public class ServidorTcpHilo extends Thread {
         return false;
     }
 
+    /**
+     * Funcion que lee el fichero Clientes.dat y los muestra por consola
+     *
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
     public static void leerUsuario() throws IOException, ClassNotFoundException {
         File fichero = new File(".//src/Ficheros/Clientes.dat");
         FileInputStream fileInputStream = new FileInputStream(fichero);
@@ -299,6 +353,12 @@ public class ServidorTcpHilo extends Thread {
         fileInputStream.close();
     }
 
+    /**
+     * Funcionque lee el fichero Cuentas.dat y los muestra por consola
+     *
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
     public static void leerCuenta() throws IOException, ClassNotFoundException {
         File fichero = new File(".//src/Ficheros/Cuentas.dat");
         FileInputStream fileInputStream = new FileInputStream(fichero);
@@ -315,6 +375,13 @@ public class ServidorTcpHilo extends Thread {
 
     private static final String ALGORITMO = "SHA-256";
 
+    /**
+     * Funcion qye se usa para hashear la contraseña que se recibe desde el cliente
+     *
+     * @param mensaje recibe la contraseña en bytes
+     * @return devuevlve un array de bytes que estan ya hasheados
+     * @throws NoSuchAlgorithmException
+     */
     public static byte[] getDigest(byte[] mensaje) throws NoSuchAlgorithmException {
         byte[] resumen;
         MessageDigest algoritmo = MessageDigest.getInstance(ALGORITMO);
@@ -325,6 +392,13 @@ public class ServidorTcpHilo extends Thread {
 
     }
 
+    /**
+     * Funcion para comparar arrays de bytes hasheados y ver si son iguales
+     *
+     * @param resumen1 array de bytes a comparar
+     * @param resumen2 array de bytes a comparar
+     * @return devuelve true si son iguales o false si no lo son
+     */
     public static boolean compararResumenes(byte[] resumen1, byte[] resumen2) throws NoSuchAlgorithmException {
         boolean sonIguales;
         MessageDigest algoritmo = MessageDigest.getInstance(ALGORITMO);
@@ -332,6 +406,12 @@ public class ServidorTcpHilo extends Thread {
         sonIguales = algoritmo.isEqual(resumen1, resumen2);
         return sonIguales;
     }
+
+    /**
+     * Funcion que nos permite ver el saldo de una cuenta
+     *
+     * @param usu recibe un nombre de usuario para ver el saldo que tiene en su cuenta
+     */
 
     public static void verSaldo(String usu) throws IOException, ClassNotFoundException {
         List<Cuenta> cuentas = new ArrayList<>();
@@ -353,6 +433,12 @@ public class ServidorTcpHilo extends Thread {
         fileInputStream.close();
     }
 
+    /**
+     * Funcion que se usa para ingresar dinero y guardar los cambios en el fichero.dat
+     *
+     * @param usu            recibe el usuario del ingreso para identificarlo
+     * @param dineroIngresar recibe cuanto se sumara al saldo por el ingreso
+     */
     public static void ingresarDinero(String usu, int dineroIngresar) throws IOException, ClassNotFoundException {
         Cuenta cuentaMod;
         File fichero = new File(".//src/Ficheros/Cuentas.dat");
@@ -390,6 +476,12 @@ public class ServidorTcpHilo extends Thread {
         dataOsAux.close();
     }
 
+    /**
+     * Funcion que se usa para comprobar si existe una cuenta por medio del numero de cuenta
+     *
+     * @param cuentaN numero de cuenta que se usa para filtrar los datos
+     * @return devuelve true si existe, false si no
+     */
     public static boolean comprobrarCuenta(String cuentaN) throws IOException, ClassNotFoundException {
 
         List<Cuenta> cuentas = new ArrayList<>();
@@ -416,6 +508,14 @@ public class ServidorTcpHilo extends Thread {
         return false;
     }
 
+    /**
+     * Funcion que se usa para realizar transeferencias a diferentes cuentas
+     *
+     * @param cuenta         recibe el numero de cuenta al que ingresar el dinero
+     * @param dineroIngresar recibe cuanto dinero se ingresara a esa cuenta
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
     public static void transferencia(String cuenta, int dineroIngresar) throws IOException, ClassNotFoundException {
         ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 
@@ -458,6 +558,12 @@ public class ServidorTcpHilo extends Thread {
 
     }
 
+    /**
+     * Funcion que retira dinero de la cuenta
+     *
+     * @param usu           recibe el usuario el cual retira dinero
+     * @param dineroRetirar la cantidad de dinero a restar del saldo
+     */
 
     public static void retirarDinero(String usu, int dineroRetirar) throws IOException, ClassNotFoundException {
         Cuenta cuentaMod;
@@ -496,6 +602,12 @@ public class ServidorTcpHilo extends Thread {
         dataOsAux.close();
     }
 
+    /**
+     * Funcion que resta dinero al que hace la transferencia
+     *
+     * @param usu           recibe el usuario que hace la transferencia
+     * @param dineroRetirar y el dinero que se le descontara por la misma
+     */
     public static void retirarDineroTran(String usu, int dineroRetirar) throws IOException, ClassNotFoundException {
         Cuenta cuentaMod;
         File fichero = new File(".//src/Ficheros/Cuentas.dat");
@@ -533,6 +645,9 @@ public class ServidorTcpHilo extends Thread {
         dataOsAux.close();
     }
 
+    /**
+     * Funcion que sirve de apoyo para modificar los datos en el fichero.dat
+     */
     public static void crearNuevaCuentaMod() throws IOException {
         Cuenta cuentaMod;
 
@@ -558,6 +673,16 @@ public class ServidorTcpHilo extends Thread {
         fileOut.close();
         fileInAux.close();
 
+    }
+
+    /**
+     * Funcion que se usa para la doble autenticacion de las transferencias
+     *
+     * @return devuelve un numero aleatoria que despues sera cifrado y enviado al cliente
+     */
+    public int dobleFactor() {
+        Random r = new Random();
+        return r.nextInt(0, 100);
     }
 
 

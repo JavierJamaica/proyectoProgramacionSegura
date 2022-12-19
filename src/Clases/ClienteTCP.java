@@ -13,6 +13,10 @@ import java.util.regex.Pattern;
 public class ClienteTCP {
     private static final String ENCODING_TYPE = "UTF-8";
 
+    /**
+     * Funcion que ejecuta al programa, lo primero que hace es crear una conexion con el servidor y luego nos mostrara
+     * un menu
+     */
     public static void main(String[] args) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
         Pattern pat;
         Matcher mat;
@@ -29,13 +33,12 @@ public class ClienteTCP {
             System.out.println("Leemos la clave");
             //obtenemos la clave publica
             PublicKey clave = (PublicKey) ois.readObject();
-            System.out.println("La clave recibida es: " + clave);
+            PrivateKey clave2 = (PrivateKey) ois.readObject();
 
 
             do {
 
                 try {
-
                     System.out.println("""
                             Bienvenido a JamaicaBank que desea hacer?.
                             1. Darse de alta
@@ -175,7 +178,7 @@ public class ClienteTCP {
                                         System.out.println("Escribe la contraseña: ");
                                         System.out.print("Contraseña: ");
                                         String contra = br.readLine();
-                                        if (comprobarContra(contra)) {
+                                        if (comprobarContra(contra, usuario)) {
                                             int rCliente;
                                             System.out.println("Bienvenido! " + usuario);
                                             do {
@@ -203,26 +206,49 @@ public class ClienteTCP {
                                                             oos.writeObject(transferCif);
                                                             switch (rTransfer) {
                                                                 case 1:
+                                                                    byte[] codF = (byte[]) ois.readObject();
+                                                                    int codFDec = Integer.parseInt(ServidorTcpHilo.decifrarDatos(codF, clave2));
+                                                                    boolean comCod = false;
+                                                                    int codR = 0;
+                                                                    do {
+                                                                        System.out.println("Escribe este codigo: " + codFDec);
+                                                                        System.out.print("C: ");
+                                                                        try {
+                                                                            codR = Integer.parseInt(br.readLine());
+                                                                            comCod = true;
+                                                                        } catch (NumberFormatException ignored) {
+                                                                        }
 
-                                                                    System.out.println("Escribe el numero de cuenta a donde deseas hacer la transferencia: ");
-                                                                    System.out.print("Cuenta: ");
-                                                                    String nCuentaTrans = br.readLine();
-                                                                    byte[] nCuentaCif = cifrarDatosAlta(nCuentaTrans, clave);
-                                                                    System.out.println("Enviamos Cuenta");
-                                                                    oos.writeObject(nCuentaCif);
-                                                                    if (ois.readObject().toString().equals("false")) {
-                                                                        System.out.println("La cuenta no existe");
+                                                                    } while (!comCod);
+
+                                                                    System.out.println("Enviamos cod");
+                                                                    byte[] codRcif = cifrarDatosAlta(String.valueOf(codR), clave);
+                                                                    oos.writeObject(codRcif);
+                                                                    byte[] okRec = (byte[]) ois.readObject();
+                                                                    String okDec = ServidorTcpHilo.decifrarDatos(okRec, clave2);
+                                                                    if (okDec.equals("true")) {
+                                                                        System.out.println("Escribe el numero de cuenta a donde deseas hacer la transferencia: ");
+                                                                        System.out.print("Cuenta: ");
+                                                                        String nCuentaTrans = br.readLine();
+                                                                        byte[] nCuentaCif = cifrarDatosAlta(nCuentaTrans, clave);
+                                                                        System.out.println("Enviamos Cuenta");
+                                                                        oos.writeObject(nCuentaCif);
+                                                                        if (ois.readObject().toString().equals("false")) {
+                                                                            System.out.println("La cuenta no existe");
+                                                                        } else {
+                                                                            System.out.println("Escribe la cantidad que vas a enviar: ");
+                                                                            System.out.print("Cantidad: ");
+                                                                            int dineroTran = Integer.parseInt(br.readLine());
+                                                                            byte[] dineroTranCif = cifrarDatosAlta(String.valueOf(dineroTran), clave);
+
+                                                                            byte[] usuCifTran = cifrarDatosAlta(usuario, clave);
+
+                                                                            System.out.println("Enviamos Cantidad");
+                                                                            oos.writeObject(dineroTranCif);
+                                                                            oos.writeObject(usuCifTran);
+                                                                        }
                                                                     } else {
-                                                                        System.out.println("Escribe la cantidad que vas a enviar: ");
-                                                                        System.out.print("Cantidad: ");
-                                                                        int dineroTran = Integer.parseInt(br.readLine());
-                                                                        byte[] dineroTranCif = cifrarDatosAlta(String.valueOf(dineroTran), clave);
-
-                                                                        byte[] usuCifTran = cifrarDatosAlta(usuario, clave);
-
-                                                                        System.out.println("Enviamos Cantidad");
-                                                                        oos.writeObject(dineroTranCif);
-                                                                        oos.writeObject(usuCifTran);
+                                                                        System.out.println("Autenticacion fallida");
                                                                     }
 
 
@@ -283,7 +309,7 @@ public class ClienteTCP {
                                             } while (rCliente != 4);
 
                                         } else {
-                                            System.out.println("La contraseña no se encuentra en el sistema de datos");
+                                            System.out.println("La contraseña no se encuentra en el sistema de datos o es incorrecta");
                                         }
                                     } else {
                                         System.out.println("El usuario no se encuentra en el sistema de datos!");
@@ -313,6 +339,13 @@ public class ClienteTCP {
 
     }
 
+    /**
+     * Funcion que usamos para cifrar los datos que se requieran
+     *
+     * @param dato  recibe un String el cual va a ser cifrado
+     * @param clave usando la clave publica que se recibe desde el servidor cifra los datos
+     * @return devuelve un array de bytes del dato ya cifrado
+     */
     public static byte[] cifrarDatosAlta(String dato, PublicKey clave) {
         try {
             Cipher cipher = Cipher.getInstance("RSA");
@@ -328,6 +361,14 @@ public class ClienteTCP {
 
     }
 
+    /**
+     * Funcion que usamos para cifrar datos que se requieran, es igual a la anterior pero esta es especifica soloamente,
+     * para datos que sean del portal de usuario
+     *
+     * @param dato  recibe un String el cual va a ser cifrado
+     * @param clave usando la clave publica que se recibe desde el servidor cifra los datos
+     * @return devuelve un array de bytes del dato ya cifrado
+     */
     public static byte[] cifrarDatosIngresarRetirar(String dato, PublicKey clave) {
         try {
             Cipher cipher = Cipher.getInstance("RSA");
@@ -343,6 +384,12 @@ public class ClienteTCP {
 
     }
 
+    /**
+     * Funcion que usamos para comprobar si el usuario que se escribe ya esta usado
+     *
+     * @param usuario es el nombre de usuario que escriben en la alta
+     * @return devuelve true si ya existe o false si no
+     */
     public static boolean comprobarUsuario(String usuario) throws IOException, ClassNotFoundException {
         File fichero = new File(".//src/Ficheros/Clientes.dat");
         FileInputStream fileInputStream = new FileInputStream(fichero);
@@ -361,7 +408,14 @@ public class ClienteTCP {
         return false;
     }
 
-    public static boolean comprobarContra(String contra) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
+    /**
+     * Funcion que usamos para comprobar la contraseña a la hora de acceder al portal
+     *
+     * @param contra recibe la contraseña la cual se va a comparar con la que este guardada en el .dat
+     * @return devuelve true si es correcta o false si no
+     */
+
+    public static boolean comprobarContra(String contra, String usu) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
         File fichero = new File(".//src/Ficheros/Clientes.dat");
         FileInputStream fileInputStream = new FileInputStream(fichero);
         ObjectInputStream objectInputStream = null;
@@ -371,11 +425,13 @@ public class ClienteTCP {
             objectInputStream = new ObjectInputStream(fileInputStream);
             Cliente cLiente = (Cliente) objectInputStream.readObject();
             contraDeEntrada = ServidorTcpHilo.getDigest(contra.getBytes(ENCODING_TYPE));
-            contraDeOriginal = cLiente.getContra();
-            if (ServidorTcpHilo.compararResumenes(contraDeOriginal, contraDeEntrada)) {
-                System.out.printf(cLiente.toString());
-                return true;
+            if (cLiente.getUsuario().equals(usu)) {
+                contraDeOriginal = cLiente.getContra();
+                if (ServidorTcpHilo.compararResumenes(contraDeOriginal, contraDeEntrada)) {
+                    return true;
+                }
             }
+
         }
 
         assert objectInputStream != null;
@@ -385,8 +441,15 @@ public class ClienteTCP {
         return false;
     }
 
+    /**
+     * Funcion que usamos para visualizar terminos del banco
+     *
+     * @return devuelve un String con los terminos del banco
+     */
     public static String terminosBanco() {
-        return "Para ello, cuenta con diversas políticas, códigos y normativa interna, que se inspiran en las mejores prácticas y protocolos internacionales, códigos de conducta y guías internacionales aplicables en cada materia.\n" +
-                "El contenido de estas políticas constituye un proceso de mejora continua. Anualmente Santander lleva a cabo una revisión de sus políticas corporativas de sostenibilidad, de aplicación a todo el Grupo. Estas políticas son aprobadas por el consejo de administración del Grupo, indicando en la política la fecha de la última actualización.";
+        return "Contamos con diversas políticas, códigos y normativa internas, que se inspiran en las mejores prácticas y protocolos internacionales, códigos de conducta y guías internacionales aplicables en cada materia.\n" +
+                "El contenido de estas políticas constituye un proceso de mejora continua. Anualmente JamaicaBank lleva a cabo una revisión de sus políticas corporativas de sostenibilidad, de aplicación a todo el Grupo. Estas políticas son aprobadas por el consejo de administración del Grupo, indicando en la política la fecha de la última actualización\n." +
+                "Teniendo en cuenta eso, acepta las siguientes normas: No dar informacion de mas, no ser feo ni bajito, ni muy hablador o amable\n" +
+                "Tampoco ser alto o carismatico, ser muy pobre para robarle cada año mas, siendo asi indique si aceptas las normas del banco";
     }
 }
