@@ -31,9 +31,10 @@ public class ServidorTcpHilo extends Thread {
         try {
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+
+            System.out.println("Generando par de claves");
             KeyPairGenerator keygen;
             keygen = KeyPairGenerator.getInstance("RSA");
-            System.out.println("Generando par de claves");
             KeyPair par = keygen.generateKeyPair();
             PrivateKey privada = par.getPrivate();
             PublicKey publica = par.getPublic();
@@ -44,7 +45,7 @@ public class ServidorTcpHilo extends Thread {
 
             oos.writeObject(publica);
 
-            System.out.println("Enviamos la clave publica y privada");
+            System.out.println("Enviamos la clave publica ");
 
             do {
 
@@ -120,9 +121,9 @@ public class ServidorTcpHilo extends Thread {
                                                     System.out.println("Esperando opcion transfer");
                                                     byte[] transferDec = (byte[]) ois.readObject();
                                                     rTransfer = Integer.parseInt(decifrarDatos(transferDec, privada));
-
+                                                    System.out.println(rTransfer);
                                                     switch (rTransfer) {
-                                                        case 1:
+                                                        case 1 -> {
                                                             oos.writeObject(privada);
                                                             int dF = dobleFactor();
                                                             byte[] dFcif = ClienteTCP.cifrarDatosAlta(String.valueOf(dF), publica);
@@ -155,8 +156,8 @@ public class ServidorTcpHilo extends Thread {
                                                                     System.out.println("Cuenta no existe");
                                                                     String noExist = "false";
                                                                     oos.writeObject(noExist);
+
                                                                 }
-                                                                break;
                                                             } else {
                                                                 System.out.println("Autenticacion fallida");
                                                                 String ok = "false";
@@ -164,16 +165,15 @@ public class ServidorTcpHilo extends Thread {
                                                                 oos.writeObject(okDec);
 
                                                             }
-
-                                                            break;
-                                                        case 2:
+                                                        }
+                                                        case 2 -> {
                                                             System.out.println("Leyendo cuentas");
                                                             leerCuenta();
-                                                            break;
-                                                        case 3:
-                                                            System.out.println("El cliente cancelo transferencia");
-                                                            break;
-                                                        default:
+                                                        }
+                                                        case 3 ->
+                                                                System.out.println("El cliente cancelo transferencia");
+                                                        default -> {
+                                                        }
                                                     }
                                                 } while (rTransfer != 3);
                                                 break;
@@ -238,11 +238,9 @@ public class ServidorTcpHilo extends Thread {
             ois.close();
 
         } catch (NoSuchPaddingException | IllegalBlockSizeException | NoSuchAlgorithmException | IOException |
-                 BadPaddingException | InvalidKeyException | ClassNotFoundException e) {
+                 BadPaddingException | InvalidKeyException | ClassNotFoundException | SignatureException e) {
             System.out.println("Error: " + e);
-            e.printStackTrace();
-        } catch (SignatureException e) {
-            throw new RuntimeException(e);
+
         }
 
     }

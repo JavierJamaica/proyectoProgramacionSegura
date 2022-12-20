@@ -202,12 +202,13 @@ public class ClienteTCP {
                                                             rTransfer = Integer.parseInt(br.readLine());
                                                             byte[] transferCif = cifrarDatosIngresarRetirar(String.valueOf(rTransfer), clave);
                                                             oos.writeObject(transferCif);
+                                                            boolean comCod = false;
                                                             switch (rTransfer) {
                                                                 case 1:
                                                                     PrivateKey clave2 = (PrivateKey) ois.readObject();
                                                                     byte[] codF = (byte[]) ois.readObject();
                                                                     int codFDec = Integer.parseInt(ServidorTcpHilo.decifrarDatos(codF, clave2));
-                                                                    boolean comCod = false;
+
                                                                     int codR = 0;
                                                                     do {
                                                                         System.out.println("Escribe este codigo: " + codFDec);
