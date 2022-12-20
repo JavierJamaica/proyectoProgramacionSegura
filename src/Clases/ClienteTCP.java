@@ -30,10 +30,8 @@ public class ClienteTCP {
             Socket socket = new Socket("localhost", puerto);
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-            System.out.println("Leemos la clave");
             //obtenemos la clave publica
             PublicKey clave = (PublicKey) ois.readObject();
-            PrivateKey clave2 = (PrivateKey) ois.readObject();
 
 
             do {
@@ -206,6 +204,7 @@ public class ClienteTCP {
                                                             oos.writeObject(transferCif);
                                                             switch (rTransfer) {
                                                                 case 1:
+                                                                    PrivateKey clave2 = (PrivateKey) ois.readObject();
                                                                     byte[] codF = (byte[]) ois.readObject();
                                                                     int codFDec = Integer.parseInt(ServidorTcpHilo.decifrarDatos(codF, clave2));
                                                                     boolean comCod = false;
@@ -237,13 +236,24 @@ public class ClienteTCP {
                                                                             System.out.println("La cuenta no existe");
                                                                         } else {
                                                                             System.out.println("Escribe la cantidad que vas a enviar: ");
-                                                                            System.out.print("Cantidad: ");
-                                                                            int dineroTran = Integer.parseInt(br.readLine());
+                                                                            boolean comCant = false;
+                                                                            int dineroTran = 0;
+                                                                            do {
+                                                                                try {
+                                                                                    System.out.print("Cantidad: ");
+
+                                                                                    dineroTran = Integer.parseInt(br.readLine());
+                                                                                    comCant = true;
+                                                                                } catch (
+                                                                                        NumberFormatException ignored) {
+                                                                                }
+                                                                            } while (!comCant);
+
+
                                                                             byte[] dineroTranCif = cifrarDatosAlta(String.valueOf(dineroTran), clave);
 
                                                                             byte[] usuCifTran = cifrarDatosAlta(usuario, clave);
-
-                                                                            System.out.println("Enviamos Cantidad");
+                                                                            
                                                                             oos.writeObject(dineroTranCif);
                                                                             oos.writeObject(usuCifTran);
                                                                         }

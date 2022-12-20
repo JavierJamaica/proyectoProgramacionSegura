@@ -43,7 +43,7 @@ public class ServidorTcpHilo extends Thread {
             //mandamos la clave publica
 
             oos.writeObject(publica);
-            oos.writeObject(privada);
+
             System.out.println("Enviamos la clave publica y privada");
 
             do {
@@ -91,10 +91,10 @@ public class ServidorTcpHilo extends Thread {
                             darAltaUsuario(nombreDecifrado, apellidoDecifrado, edadDecifrada, emailDecifrado, usuarioDecifrado, contraRecibida);
                         } else {
                             System.out.println("No acepto las normas");
-                            break;
+
                         }
 
-
+                        break;
                     case 2:
 
                         int opAccesoPort;
@@ -123,6 +123,7 @@ public class ServidorTcpHilo extends Thread {
 
                                                     switch (rTransfer) {
                                                         case 1:
+                                                            oos.writeObject(privada);
                                                             int dF = dobleFactor();
                                                             byte[] dFcif = ClienteTCP.cifrarDatosAlta(String.valueOf(dF), publica);
                                                             oos.writeObject(dFcif);
@@ -131,7 +132,7 @@ public class ServidorTcpHilo extends Thread {
                                                             int codDescDf = Integer.parseInt(decifrarDatos(codEsCif, privada));
                                                             if (codDescDf == dF) {
                                                                 String ok = "true";
-                                                                byte[] okDec = ClienteTCP.cifrarDatosAlta(ok,publica);
+                                                                byte[] okDec = ClienteTCP.cifrarDatosAlta(ok, publica);
                                                                 oos.writeObject(okDec);
                                                                 System.out.println("Autenticacion correcta");
                                                                 System.out.println("Esperando cuentaN");
@@ -149,16 +150,17 @@ public class ServidorTcpHilo extends Thread {
                                                                     byte[] usuCif = (byte[]) ois.readObject();
                                                                     String usuDecif = decifrarDatos(usuCif, privada);
                                                                     retirarDineroTran(usuDecif, dineroDec);
-                                                                    break;
+
                                                                 } else {
                                                                     System.out.println("Cuenta no existe");
                                                                     String noExist = "false";
                                                                     oos.writeObject(noExist);
                                                                 }
+                                                                break;
                                                             } else {
                                                                 System.out.println("Autenticacion fallida");
                                                                 String ok = "false";
-                                                                byte[] okDec = ClienteTCP.cifrarDatosAlta(ok,publica);
+                                                                byte[] okDec = ClienteTCP.cifrarDatosAlta(ok, publica);
                                                                 oos.writeObject(okDec);
 
                                                             }
